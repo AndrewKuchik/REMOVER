@@ -5,11 +5,6 @@ import { composeCutout } from './refine.js';
 // --- Элементы ---
 const drop = document.getElementById('drop');
 const fileInput = document.getElementById('file');
-const statusEl = document.getElementById('status');
-const statusText = document.getElementById('status-text');
-const statusSub = document.getElementById('status-sub');
-const barWrap = document.getElementById('bar-wrap');
-const barFill = document.getElementById('bar-fill');
 const noticeEl = document.getElementById('notice');
 const noticeText = document.getElementById('notice-text');
 const noticeRetry = document.getElementById('notice-retry');
@@ -29,6 +24,12 @@ const decontEl = document.getElementById('decont');
 const vShrink = document.getElementById('v-shrink');
 const vFeather = document.getElementById('v-feather');
 const bgColor = document.getElementById('bg-color');
+// оверлей обработки
+const proc = document.getElementById('proc');
+const procLabel = document.getElementById('proc-label');
+const procSub = document.getElementById('proc-sub');
+const barWrap = document.getElementById('bar-wrap');
+const barFill = document.getElementById('bar-fill');
 
 let prepared = null;
 let currentName = 'cutout';
@@ -37,40 +38,43 @@ let currentFile = null;
 
 function show(view) {
   drop.hidden = view !== 'drop';
-  statusEl.hidden = view !== 'status';
   noticeEl.hidden = view !== 'notice';
   resultEl.hidden = view !== 'result';
 }
 
-// --- Статус: спокойное скачивание (полоса + МБ) → обработка (счётчик) ---
+// --- Обработка прямо на месте результата ---
 let procTimer = null;
 function stopProcTimer() { if (procTimer) { clearInterval(procTimer); procTimer = null; } }
 
-function statusDownloading(info) {
+function enterProcessing() {
+  resultEl.classList.add('processing');
+  proc.hidden = true;      // оверлей появится либо на скачивании, либо через 800 мс
+  barWrap.hidden = true;
   stopProcTimer();
+}
+function exitProcessing() {
+  resultEl.classList.remove('processing');
+  proc.hidden = true;
+  stopProcTimer();
+}
+function showDownload(info) {
+  proc.hidden = false;
   barWrap.hidden = false;
   const pct = Math.round((info.progress || 0) * 100);
   barFill.style.width = pct + '%';
-  statusText.textContent = 'Настраиваю на твоём устройстве…';
+  procLabel.textContent = 'Настройка (один раз)…';
   const mb = info.totalMB ? ` · ${Math.round(info.loadedMB)}/${Math.round(info.totalMB)} МБ` : '';
-  statusSub.textContent = `Загружаю модель один раз (${pct}%${mb}) — дальше мгновенно и без интернета.`;
+  procSub.textContent = `Загружаю модель ${pct}%${mb} — дальше мгновенно, без интернета`;
 }
-function statusProcessing() {
-  if (procTimer) return;
+function showCompute() {
+  proc.hidden = false;
   barWrap.hidden = true;
+  procLabel.textContent = 'Убираю фон…';
   const t0 = performance.now();
-  const tick = () => {
-    const s = Math.round((performance.now() - t0) / 1000);
-    statusText.textContent = 'Обрабатываю картинку…';
-    statusSub.textContent = `${s} с · идёт вычисление, не закрывай вкладку.`;
-  };
+  stopProcTimer();
+  const tick = () => { procSub.textContent = `${Math.round((performance.now() - t0) / 1000)} с`; };
   tick();
   procTimer = setInterval(tick, 1000);
-}
-function onProgress(info) {
-  if (!info) return;
-  if (info.stage === 'compute') statusProcessing();
-  else statusDownloading(info);
 }
 
 function render() {
@@ -107,24 +111,34 @@ async function handleFile(file) {
   currentFile = file;
   currentName = file.name.replace(/\.[^.]+$/, '') || 'cutout';
 
-  show('status');
-  statusText.textContent = 'Готовлю…';
-  statusSub.textContent = '';
-  barWrap.hidden = true;
+  // Показать оригинал сразу на месте результата
+  if (origUrl) URL.revokeObjectURL(origUrl);
+  origUrl = URL.createObjectURL(file);
+  origImg.src = origUrl;
+  compareRange.value = 100;
+  applyCompare();
+  enterProcessing();
+  show('result');
 
+  let delay = null;
   try {
-    prepared = await prepare(file, onProgress);
-    stopProcTimer();
-    if (origUrl) URL.revokeObjectURL(origUrl);
-    origUrl = URL.createObjectURL(file);
-    origImg.src = origUrl;
+    prepared = await prepare(file, (info) => {
+      if (info.stage === 'download') {
+        if (delay) { clearTimeout(delay); delay = null; }
+        showDownload(info);
+      } else if (info.stage === 'compute') {
+        if (!proc.hidden) showCompute();               // уже показывали скачивание — переключаем
+        else if (!delay) delay = setTimeout(showCompute, 800); // иначе через 800 мс (без мельканий)
+      }
+    });
+    if (delay) clearTimeout(delay);
+    exitProcessing();
     render();
-    compareRange.value = 100;
-    applyCompare();
     show('result');
   } catch (err) {
     console.error(err);
-    stopProcTimer();
+    if (delay) clearTimeout(delay);
+    exitProcessing();
     showNotice(err);
   }
 }

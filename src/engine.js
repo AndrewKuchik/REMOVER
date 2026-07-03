@@ -4,6 +4,7 @@
 // в общий слой обработки края (refine.js) и накладываем на оригинал в полном разрешении.
 
 import { AutoModel, AutoProcessor, RawImage } from '@huggingface/transformers';
+import { cleanMask } from './cleanup.js';
 
 const MODEL_ID = 'briaai/RMBG-1.4';
 
@@ -33,6 +34,25 @@ function getModel(onProgress) {
     procP = AutoProcessor.from_pretrained(MODEL_ID);
   }
   return Promise.all([modelP, procP]);
+}
+
+// Растянуть маску mw×mh → w×h через canvas (билинейно).
+function upscaleMask(m, mw, mh, w, h) {
+  const rgba = new Uint8ClampedArray(mw * mh * 4);
+  for (let i = 0; i < mw * mh; i++) {
+    rgba[i * 4] = rgba[i * 4 + 1] = rgba[i * 4 + 2] = m[i];
+    rgba[i * 4 + 3] = 255;
+  }
+  const cSmall = new OffscreenCanvas(mw, mh);
+  cSmall.getContext('2d').putImageData(new ImageData(rgba, mw, mh), 0, 0);
+  const cBig = new OffscreenCanvas(w, h);
+  const xb = cBig.getContext('2d');
+  xb.imageSmoothingEnabled = true;
+  xb.drawImage(cSmall, 0, 0, w, h);
+  const d = xb.getImageData(0, 0, w, h).data;
+  const mask = new Uint8ClampedArray(w * h);
+  for (let i = 0; i < w * h; i++) mask[i] = d[i * 4];
+  return mask;
 }
 
 // Уменьшить до maxSide и вернуть RawImage (RGB) для модели.
@@ -70,11 +90,17 @@ export async function prepare(file, onProgress) {
   const out = await model({ input: pixel_values });
   const tensor = out.output ?? out[Object.keys(out)[0]];
 
-  // Маска (0..1 → 0..255), растянутая до размера оригинала
-  const maskRaw = await RawImage.fromTensor(tensor[0].mul(255).to('uint8')).resize(w, h);
-  const mask = new Uint8ClampedArray(w * h);
-  const ch = maskRaw.channels;
-  for (let i = 0; i < w * h; i++) mask[i] = maskRaw.data[i * ch];
+  // Маска на РОДНОМ разрешении (без растягивания)
+  const maskRaw = await RawImage.fromTensor(tensor[0].mul(255).to('uint8'));
+  const mw = maskRaw.width, mh = maskRaw.height, ch = maskRaw.channels;
+  const mNative = new Uint8ClampedArray(mw * mh);
+  for (let i = 0; i < mw * mh; i++) mNative[i] = maskRaw.data[i * ch];
+
+  // Чистим грязь/точки/туман ДО растягивания
+  cleanMask(mNative, mw, mh);
+
+  // Растягиваем очищенную маску до размера оригинала (билинейно, через canvas)
+  const mask = upscaleMask(mNative, mw, mh, w, h);
 
   return { src, mask, w, h };
 }

@@ -20,18 +20,9 @@
             <div class="drop-icon">🖼️</div>
             <div class="drop-title">Перетащи картинку сюда</div>
             <div class="drop-sub">или нажми, чтобы выбрать файл</div>
+            <div class="drop-privacy">🔒 Картинки не покидают твоё устройство</div>
           </div>
         </label>
-
-        <!-- Прогресс -->
-        <div id="status" class="status" hidden>
-          <div class="spinner"></div>
-          <div class="status-body">
-            <div id="status-text">Готовлю…</div>
-            <div id="status-sub" class="status-sub"></div>
-            <div class="bar" id="bar-wrap" hidden><div class="bar-fill" id="bar-fill"></div></div>
-          </div>
-        </div>
 
         <!-- Мягкое сообщение (не ошибка-паника) -->
         <div id="notice" class="notice" hidden>
@@ -52,6 +43,15 @@
                 <canvas id="result-canvas"></canvas>
               </div>
               <div class="divider" id="divider"></div>
+              <!-- Обработка прямо на месте результата -->
+              <div class="proc" id="proc" hidden>
+                <div class="proc-card">
+                  <div class="spinner"></div>
+                  <div id="proc-label">Убираю фон…</div>
+                  <div id="proc-sub" class="proc-sub"></div>
+                  <div class="bar" id="bar-wrap" hidden><div class="bar-fill" id="bar-fill"></div></div>
+                </div>
+              </div>
             </div>
           </div>
           <input id="compare-range" class="compare-range" type="range" min="0" max="100" value="100" />
