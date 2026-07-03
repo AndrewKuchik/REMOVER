@@ -5,3 +5,4 @@ dist
 .vite
 _verify.mjs
 _verify-node.mjs
+_diag.mjs

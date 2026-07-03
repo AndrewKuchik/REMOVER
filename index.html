@@ -27,32 +27,23 @@
         <div id="status" class="status" hidden>
           <div class="spinner"></div>
           <div class="status-body">
-            <div id="status-text">Обработка…</div>
+            <div id="status-text">Готовлю…</div>
             <div id="status-sub" class="status-sub"></div>
+            <div class="bar" id="bar-wrap" hidden><div class="bar-fill" id="bar-fill"></div></div>
           </div>
         </div>
 
-        <!-- Ошибка -->
-        <div id="error" class="error-box" hidden>
-          <div class="error-icon">⚠️</div>
-          <div id="error-text" class="error-text"></div>
+        <!-- Мягкое сообщение (не ошибка-паника) -->
+        <div id="notice" class="notice" hidden>
+          <div id="notice-text" class="notice-text"></div>
           <div class="actions">
-            <button id="err-retry" class="btn btn-primary">Попробовать снова</button>
-            <button id="err-fast" class="btn" hidden>Переключиться на «⚡ Быстро»</button>
-            <button id="err-back" class="btn">Другая картинка</button>
+            <button id="notice-retry" class="btn btn-primary">Попробовать снова</button>
+            <button id="notice-back" class="btn">Выбрать другую картинку</button>
           </div>
         </div>
 
         <!-- Результат -->
         <div id="result" class="result" hidden>
-          <!-- Режим качества -->
-          <div class="modebar">
-            <span class="bgbar-title">Режим:</span>
-            <label class="mode"><input type="radio" name="mode" value="fast" checked /> ⚡ Быстро</label>
-            <label class="mode"><input type="radio" name="mode" value="pro" /> 💎 Качество</label>
-            <span class="mode-hint">«Качество» точнее на волосах/кружеве (первый раз качает модель).</span>
-          </div>
-
           <!-- Сравнение до/после -->
           <div class="stage">
             <div class="compare" id="compare">
@@ -77,7 +68,7 @@
             <label class="sw sw-custom" title="Свой цвет">🎨<input id="bg-color" type="color" value="#ff5aa5" /></label>
           </div>
 
-          <!-- Настройки края -->
+          <!-- Тонкая настройка края -->
           <div class="controls">
             <div class="control">
               <label>Обрезать каёмку: <b id="v-shrink">1</b> px</label>
