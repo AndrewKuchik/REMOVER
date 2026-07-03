@@ -95,6 +95,8 @@ function morph(a, w, h, r, max) {
 // Открытие (эрозия→дилатация): убирает нити/шум. Закрытие: заполняет дырки.
 export function open(a, w, h, r) { morph(a, w, h, r, false); morph(a, w, h, r, true); }
 export function close(a, w, h, r) { morph(a, w, h, r, true); morph(a, w, h, r, false); }
+export function dilate(a, w, h, r) { morph(a, w, h, r, true); }
+export function erode(a, w, h, r) { morph(a, w, h, r, false); }
 
 /**
  * Полная очистка маски на родном разрешении.

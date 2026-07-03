@@ -6,3 +6,4 @@ dist
 _verify.mjs
 _verify-node.mjs
 _diag.mjs
+_verify2.mjs

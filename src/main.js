@@ -1,5 +1,5 @@
 import './style.css';
-import { prepare } from './engine.js';
+import { prepareInstant, prepareNeural, keyFromProxy } from './router.js';
 import { composeCutout } from './refine.js';
 
 // --- Элементы ---
@@ -24,6 +24,11 @@ const decontEl = document.getElementById('decont');
 const vShrink = document.getElementById('v-shrink');
 const vFeather = document.getElementById('v-feather');
 const bgColor = document.getElementById('bg-color');
+const sensEl = document.getElementById('sens');
+const vSens = document.getElementById('v-sens');
+const ctlSens = document.getElementById('ctl-sens');
+const useNeuralBtn = document.getElementById('use-neural');
+const engineNote = document.getElementById('engine-note');
 // оверлей обработки
 const proc = document.getElementById('proc');
 const procLabel = document.getElementById('proc-label');
@@ -103,7 +108,7 @@ function setBg(bg, btn) {
   else { cutoutLayer.classList.remove('checker'); cutoutLayer.style.background = bg; }
 }
 
-async function handleFile(file) {
+async function handleFile(file, mode = 'instant') {
   if (!file || !file.type.startsWith('image/')) {
     showNotice('Это не похоже на картинку. Выбери файл PNG, JPG и т.п.');
     return;
@@ -122,24 +127,41 @@ async function handleFile(file) {
 
   let delay = null;
   try {
-    prepared = await prepare(file, (info) => {
-      if (info.stage === 'download') {
-        if (delay) { clearTimeout(delay); delay = null; }
-        showDownload(info);
-      } else if (info.stage === 'compute') {
-        if (!proc.hidden) showCompute();               // уже показывали скачивание — переключаем
-        else if (!delay) delay = setTimeout(showCompute, 800); // иначе через 800 мс (без мельканий)
-      }
-    });
+    if (mode === 'neural') {
+      prepared = await prepareNeural(file, (info) => {
+        if (info.stage === 'download') { if (delay) { clearTimeout(delay); delay = null; } showDownload(info); }
+        else if (info.stage === 'compute') { if (!proc.hidden) showCompute(); else if (!delay) delay = setTimeout(showCompute, 800); }
+      });
+    } else {
+      delay = setTimeout(showCompute, 800); // мгновенно обычно успевает раньше
+      prepared = await prepareInstant(file, { tol: +sensEl.value });
+    }
     if (delay) clearTimeout(delay);
     exitProcessing();
     render();
+    afterPrepared();
     show('result');
   } catch (err) {
     console.error(err);
     if (delay) clearTimeout(delay);
     exitProcessing();
     showNotice(err);
+  }
+}
+
+// Настройка интерфейса под сработавший движок.
+function afterPrepared() {
+  const m = prepared?.meta || {};
+  const instant = m.engine === 'instant';
+  ctlSens.hidden = !instant;                 // ползунок чувствительности — только для кейера
+  useNeuralBtn.hidden = m.engine === 'neural';
+  if (m.engine === 'neural') {
+    engineNote.textContent = 'Нейросеть RMBG';
+  } else {
+    const busy = m.uniformity && m.uniformity.mean > 6;
+    engineNote.textContent = busy
+      ? 'Мгновенно (0 МБ). Фон неоднородный — если осталось лишнее, попробуй нейросеть →'
+      : 'Мгновенно, без загрузки (0 МБ)';
   }
 }
 
@@ -151,10 +173,22 @@ function showNotice(err) {
   show('notice');
 }
 
+// --- Чувствительность фона: живой пере-расчёт маски по прокси (мгновенно) ---
+sensEl.addEventListener('input', () => {
+  vSens.textContent = sensEl.value;
+  if (prepared?.meta?.engine === 'instant' && prepared.meta.proxy) {
+    prepared.mask = keyFromProxy(prepared.meta.proxy, prepared.w, prepared.h, +sensEl.value);
+    render();
+  }
+});
+
 // --- Настройки края ---
 shrinkEl.addEventListener('input', () => { vShrink.textContent = shrinkEl.value; render(); });
 featherEl.addEventListener('input', () => { vFeather.textContent = featherEl.value; render(); });
 decontEl.addEventListener('change', render);
+
+// --- Сложный фон → нейросеть (ленивая загрузка) ---
+useNeuralBtn.addEventListener('click', () => { if (currentFile) handleFile(currentFile, 'neural'); });
 
 // --- До/после ---
 compareRange.addEventListener('input', applyCompare);
