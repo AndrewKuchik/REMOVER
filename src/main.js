@@ -2,7 +2,7 @@ import './style.css';
 import { prepare } from './engine.js';
 import { composeCutout } from './refine.js';
 
-// --- Элементы страницы ---
+// --- Элементы ---
 const drop = document.getElementById('drop');
 const fileInput = document.getElementById('file');
 const statusEl = document.getElementById('status');
@@ -10,6 +10,10 @@ const statusText = document.getElementById('status-text');
 const resultEl = document.getElementById('result');
 const canvas = document.getElementById('result-canvas');
 const ctx = canvas.getContext('2d');
+const origImg = document.getElementById('orig-img');
+const cutoutLayer = document.getElementById('cutout-layer');
+const divider = document.getElementById('divider');
+const compareRange = document.getElementById('compare-range');
 const downloadBtn = document.getElementById('download');
 const againBtn = document.getElementById('again');
 
@@ -18,9 +22,11 @@ const featherEl = document.getElementById('feather');
 const decontEl = document.getElementById('decont');
 const vShrink = document.getElementById('v-shrink');
 const vFeather = document.getElementById('v-feather');
+const bgColor = document.getElementById('bg-color');
 
-let prepared = null;        // { src, mask, w, h } — результат нейросети (считается 1 раз)
+let prepared = null;
 let currentName = 'cutout';
+let origUrl = null;
 
 function show(view) {
   drop.hidden = view !== 'drop';
@@ -28,7 +34,7 @@ function show(view) {
   resultEl.hidden = view !== 'result';
 }
 
-// Пересобрать картинку с текущими настройками края (быстро, без нейросети).
+// Пересчёт края с текущими настройками (быстро, без нейросети).
 function render() {
   if (!prepared) return;
   const { src, mask, w, h } = prepared;
@@ -40,6 +46,26 @@ function render() {
   canvas.width = w;
   canvas.height = h;
   ctx.putImageData(img, 0, 0);
+}
+
+// Ползунок «до/после»: слева оригинал, справа результат.
+function applyCompare() {
+  const v = +compareRange.value; // 100 = весь результат
+  cutoutLayer.style.clipPath = `inset(0 ${100 - v}% 0 0)`;
+  divider.style.left = `${v}%`;
+}
+
+// Фон под прозрачной картинкой.
+function setBg(bg, btn) {
+  document.querySelectorAll('.sw').forEach((s) => s.classList.remove('active'));
+  if (btn) btn.classList.add('active');
+  if (bg === 'checker') {
+    cutoutLayer.classList.add('checker');
+    cutoutLayer.style.background = '';
+  } else {
+    cutoutLayer.classList.remove('checker');
+    cutoutLayer.style.background = bg;
+  }
 }
 
 async function handleFile(file) {
@@ -56,7 +82,12 @@ async function handleFile(file) {
     prepared = await prepare(file, (p) => {
       statusText.textContent = `Обработка… ${Math.round(p * 100)}%`;
     });
+    if (origUrl) URL.revokeObjectURL(origUrl);
+    origUrl = URL.createObjectURL(file);
+    origImg.src = origUrl;
     render();
+    compareRange.value = 100;
+    applyCompare();
     show('result');
   } catch (err) {
     console.error(err);
@@ -65,19 +96,28 @@ async function handleFile(file) {
   }
 }
 
-// --- Ползунки: мгновенный пересчёт края ---
+// Ползунки края
 shrinkEl.addEventListener('input', () => { vShrink.textContent = shrinkEl.value; render(); });
 featherEl.addEventListener('input', () => { vFeather.textContent = featherEl.value; render(); });
 decontEl.addEventListener('change', render);
 
-// --- Выбор файла ---
+// До/после
+compareRange.addEventListener('input', applyCompare);
+
+// Фоны
+document.querySelectorAll('.sw[data-bg]').forEach((btn) =>
+  btn.addEventListener('click', () => setBg(btn.dataset.bg, btn))
+);
+bgColor.addEventListener('input', () => setBg(bgColor.value, bgColor.closest('.sw')));
+
+// Выбор файла
 fileInput.addEventListener('change', (e) => {
   const file = e.target.files?.[0];
   if (file) handleFile(file);
   fileInput.value = '';
 });
 
-// --- Drag & drop ---
+// Drag & drop
 ['dragenter', 'dragover'].forEach((ev) =>
   drop.addEventListener(ev, (e) => { e.preventDefault(); drop.classList.add('dragover'); })
 );
@@ -89,7 +129,7 @@ drop.addEventListener('drop', (e) => {
   if (file) handleFile(file);
 });
 
-// --- Скачать PNG (из холста, полное разрешение) ---
+// Скачать PNG (полное разрешение)
 downloadBtn.addEventListener('click', () => {
   canvas.toBlob((blob) => {
     const a = document.createElement('a');

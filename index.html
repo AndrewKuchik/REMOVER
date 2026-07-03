@@ -9,7 +9,7 @@
     <div id="app">
       <header class="topbar">
         <div class="brand">✂️ REMOVER</div>
-        <div class="tagline">Удаление фона прямо в браузере — бесплатно и приватно</div>
+        <div class="tagline">Удаление фона прямо в браузере — бесплатно, приватно, в полном разрешении</div>
       </header>
 
       <main id="main">
@@ -31,8 +31,28 @@
 
         <!-- Результат -->
         <div id="result" class="result" hidden>
-          <div class="canvas-wrap checker">
-            <canvas id="result-canvas"></canvas>
+          <!-- Сравнение до/после -->
+          <div class="stage">
+            <div class="compare" id="compare">
+              <img id="orig-img" alt="Оригинал" />
+              <div class="cutout-layer checker" id="cutout-layer">
+                <canvas id="result-canvas"></canvas>
+              </div>
+              <div class="divider" id="divider"></div>
+            </div>
+          </div>
+          <input id="compare-range" class="compare-range" type="range" min="0" max="100" value="100" />
+          <div class="compare-hint">◀ тяни: слева оригинал · справа результат ▶</div>
+
+          <!-- Фон для проверки края -->
+          <div class="bgbar">
+            <span class="bgbar-title">Фон:</span>
+            <button class="sw sw-checker active" data-bg="checker" title="Прозрачный"></button>
+            <button class="sw" data-bg="#ffffff" style="background:#ffffff" title="Белый"></button>
+            <button class="sw" data-bg="#111318" style="background:#111318" title="Чёрный"></button>
+            <button class="sw" data-bg="#5b8cff" style="background:#5b8cff" title="Синий"></button>
+            <button class="sw" data-bg="#35c48f" style="background:#35c48f" title="Зелёный"></button>
+            <label class="sw sw-custom" title="Свой цвет">🎨<input id="bg-color" type="color" value="#ff5aa5" /></label>
           </div>
 
           <!-- Настройки края -->
