@@ -87,6 +87,12 @@ body {
   background-color: #20242e;
 }
 
+/* Переключатель режима */
+.modebar { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; justify-content: center; }
+.mode { display: inline-flex; align-items: center; gap: 6px; cursor: pointer; font-size: 14px; }
+.mode input { accent-color: var(--accent); }
+.mode-hint { color: var(--muted); font-size: 12px; }
+
 /* Сравнение до/после */
 .stage { width: 100%; display: flex; justify-content: center; }
 .compare {

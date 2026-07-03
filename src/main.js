@@ -1,6 +1,7 @@
 import './style.css';
 import { prepare } from './engine.js';
 import { composeCutout } from './refine.js';
+// про-движок (transformers.js) грузим лениво — только когда выбран режим «Качество»
 
 // --- Элементы ---
 const drop = document.getElementById('drop');
@@ -27,6 +28,9 @@ const bgColor = document.getElementById('bg-color');
 let prepared = null;
 let currentName = 'cutout';
 let origUrl = null;
+let currentFile = null;
+
+const getMode = () => document.querySelector('input[name="mode"]:checked')?.value || 'fast';
 
 function show(view) {
   drop.hidden = view !== 'drop';
@@ -73,13 +77,20 @@ async function handleFile(file) {
     alert('Пожалуйста, выбери картинку (PNG, JPG и т.п.).');
     return;
   }
+  currentFile = file;
   currentName = file.name.replace(/\.[^.]+$/, '') || 'cutout';
+  const mode = getMode();
 
   show('status');
-  statusText.textContent = 'Загрузка движка и обработка… (первый раз дольше — качается модель)';
+  statusText.textContent = mode === 'pro'
+    ? 'Качественный режим: загрузка модели и обработка… (первый раз дольше)'
+    : 'Загрузка движка и обработка… (первый раз дольше — качается модель)';
 
   try {
-    prepared = await prepare(file, (p) => {
+    const run = mode === 'pro'
+      ? (await import('./engine-pro.js')).preparePro
+      : prepare;
+    prepared = await run(file, (p) => {
       statusText.textContent = `Обработка… ${Math.round(p * 100)}%`;
     });
     if (origUrl) URL.revokeObjectURL(origUrl);
@@ -103,6 +114,11 @@ decontEl.addEventListener('change', render);
 
 // До/после
 compareRange.addEventListener('input', applyCompare);
+
+// Смена режима качества — переобработать текущую картинку
+document.querySelectorAll('input[name="mode"]').forEach((r) =>
+  r.addEventListener('change', () => { if (currentFile) handleFile(currentFile); })
+);
 
 // Фоны
 document.querySelectorAll('.sw[data-bg]').forEach((btn) =>
@@ -141,5 +157,11 @@ downloadBtn.addEventListener('click', () => {
 });
 
 againBtn.addEventListener('click', () => show('drop'));
+
+// Честное предупреждение, если у браузера нет WebGPU (про-режим будет медленным).
+if (typeof navigator !== 'undefined' && !navigator.gpu) {
+  const hint = document.querySelector('.mode-hint');
+  if (hint) hint.textContent = '«Качество» точнее, но в этом браузере нет WebGPU — считает медленно.';
+}
 
 show('drop');
