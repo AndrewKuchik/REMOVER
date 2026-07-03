@@ -12,6 +12,11 @@
 
 * { box-sizing: border-box; }
 
+/* ВАЖНО: атрибут hidden должен реально прятать элемент, даже если ниже задан
+   display:flex/grid. Без !important экраны (загрузка/результат/ошибка) показывались
+   все сразу, а спиннер «висел вечно». */
+[hidden] { display: none !important; }
+
 body {
   margin: 0;
   font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
@@ -207,8 +212,9 @@ body {
   cursor: pointer;
   transition: background .15s, border-color .15s, transform .05s;
 }
-.btn:hover { border-color: var(--accent); }
-.btn:active { transform: translateY(1px); }
+.btn:hover { border-color: var(--accent); background: #232838; }
+.btn:active { transform: translateY(1px) scale(0.985); filter: brightness(0.9); }
+.btn:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
 .btn-primary { background: var(--accent); border-color: var(--accent); font-weight: 600; }
 .btn-primary:hover { background: var(--accent-2); border-color: var(--accent-2); }
 
