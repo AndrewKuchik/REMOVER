@@ -11,9 +11,37 @@
         <div class="brand">✂️ REMOVER</div>
         <div class="tagline">Удаление фона прямо в браузере — бесплатно и приватно</div>
       </header>
+
       <main id="main">
-        <p class="boot">Загрузка…</p>
+        <!-- Зона загрузки -->
+        <label id="drop" class="drop">
+          <input id="file" type="file" accept="image/*" hidden />
+          <div class="drop-inner">
+            <div class="drop-icon">🖼️</div>
+            <div class="drop-title">Перетащи картинку сюда</div>
+            <div class="drop-sub">или нажми, чтобы выбрать файл</div>
+          </div>
+        </label>
+
+        <!-- Прогресс -->
+        <div id="status" class="status" hidden>
+          <div class="spinner"></div>
+          <span id="status-text">Обработка…</span>
+        </div>
+
+        <!-- Результат -->
+        <div id="result" class="result" hidden>
+          <div class="canvas-wrap checker">
+            <img id="result-img" alt="Результат" />
+          </div>
+          <div class="actions">
+            <button id="download" class="btn btn-primary">⬇️ Скачать PNG</button>
+            <button id="again" class="btn">Другая картинка</button>
+          </div>
+        </div>
       </main>
+
+      <footer class="foot">Работает без сервера. Картинки не покидают твоё устройство.</footer>
     </div>
     <script type="module" src="/src/main.js"></script>
   </body>
