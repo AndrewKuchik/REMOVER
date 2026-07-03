@@ -14,7 +14,10 @@ import { segmentForeground } from '@imgly/background-removal';
 export async function getMask(input, onProgress) {
   return await segmentForeground(input, {
     progress: (key, current, total) => {
-      if (onProgress && total) onProgress(current / total);
+      if (!onProgress || !total) return;
+      // key вида "fetch:/models/..." (скачивание) или "compute:..." (обработка)
+      const stage = String(key).startsWith('fetch') ? 'download' : 'compute';
+      onProgress({ stage, progress: current / total });
     },
   });
 }

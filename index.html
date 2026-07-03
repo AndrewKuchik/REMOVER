@@ -26,7 +26,21 @@
         <!-- Прогресс -->
         <div id="status" class="status" hidden>
           <div class="spinner"></div>
-          <span id="status-text">Обработка…</span>
+          <div class="status-body">
+            <div id="status-text">Обработка…</div>
+            <div id="status-sub" class="status-sub"></div>
+          </div>
+        </div>
+
+        <!-- Ошибка -->
+        <div id="error" class="error-box" hidden>
+          <div class="error-icon">⚠️</div>
+          <div id="error-text" class="error-text"></div>
+          <div class="actions">
+            <button id="err-retry" class="btn btn-primary">Попробовать снова</button>
+            <button id="err-fast" class="btn" hidden>Переключиться на «⚡ Быстро»</button>
+            <button id="err-back" class="btn">Другая картинка</button>
+          </div>
         </div>
 
         <!-- Результат -->

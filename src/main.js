@@ -8,6 +8,12 @@ const drop = document.getElementById('drop');
 const fileInput = document.getElementById('file');
 const statusEl = document.getElementById('status');
 const statusText = document.getElementById('status-text');
+const statusSub = document.getElementById('status-sub');
+const errorEl = document.getElementById('error');
+const errorText = document.getElementById('error-text');
+const errRetry = document.getElementById('err-retry');
+const errFast = document.getElementById('err-fast');
+const errBack = document.getElementById('err-back');
 const resultEl = document.getElementById('result');
 const canvas = document.getElementById('result-canvas');
 const ctx = canvas.getContext('2d');
@@ -35,7 +41,47 @@ const getMode = () => document.querySelector('input[name="mode"]:checked')?.valu
 function show(view) {
   drop.hidden = view !== 'drop';
   statusEl.hidden = view !== 'status';
+  errorEl.hidden = view !== 'error';
   resultEl.hidden = view !== 'result';
+}
+
+// --- Контроллер статуса: скачивание (проценты) → обработка (счётчик секунд) ---
+let procTimer = null;
+function stopProcTimer() { if (procTimer) { clearInterval(procTimer); procTimer = null; } }
+
+function statusDownloading(p) {
+  stopProcTimer();
+  statusText.textContent = `Скачиваю модель… ${Math.round((p || 0) * 100)}%`;
+  statusSub.textContent = 'Это разовая загрузка — потом модель берётся из кэша мгновенно.';
+}
+function statusProcessing() {
+  if (procTimer) return; // уже идёт
+  const t0 = performance.now();
+  const tick = () => {
+    const s = Math.round((performance.now() - t0) / 1000);
+    statusText.textContent = `Обрабатываю картинку… ${s} с`;
+    statusSub.textContent = 'Идёт вычисление, не закрывай вкладку.';
+  };
+  tick();
+  procTimer = setInterval(tick, 1000);
+}
+function onProgress(info) {
+  if (!info) return;
+  if (info.stage === 'compute') statusProcessing();
+  else statusDownloading(info.progress);
+}
+
+// Показать, какой движок/устройство реально сработали.
+function setEngineNote(info) {
+  const hint = document.querySelector('.mode-hint');
+  if (!hint) return;
+  if (info && info.model) {
+    const dev = info.device === 'WebGPU' ? 'на видеокарте (WebGPU)' : 'на процессоре';
+    const extra = info.model === 'ISNet' ? ' — WebGPU недоступен, взят лёгкий движок' : '';
+    hint.textContent = `Использовано: ${info.model} ${dev}${extra}.`;
+  } else {
+    hint.textContent = 'Быстрый режим (ISNet). «💎 Качество» точнее на волосах/кружеве.';
+  }
 }
 
 // Пересчёт края с текущими настройками (быстро, без нейросети).
@@ -82,29 +128,42 @@ async function handleFile(file) {
   const mode = getMode();
 
   show('status');
-  statusText.textContent = mode === 'pro'
-    ? 'Качественный режим: загрузка модели и обработка… (первый раз дольше)'
-    : 'Загрузка движка и обработка… (первый раз дольше — качается модель)';
+  statusText.textContent = 'Готовлю…';
+  statusSub.textContent = '';
 
   try {
-    const run = mode === 'pro'
-      ? (await import('./engine-pro.js')).preparePro
-      : prepare;
-    prepared = await run(file, (p) => {
-      statusText.textContent = `Обработка… ${Math.round(p * 100)}%`;
-    });
+    const proMod = mode === 'pro' ? await import('./engine-pro.js') : null;
+    const run = proMod ? proMod.preparePro : prepare;
+    prepared = await run(file, onProgress);
+    stopProcTimer();
+    setEngineNote(proMod ? proMod.info : null);
     if (origUrl) URL.revokeObjectURL(origUrl);
     origUrl = URL.createObjectURL(file);
     origImg.src = origUrl;
     render();
     compareRange.value = 100;
     applyCompare();
-    show('result');
+    show('result'); // окно загрузки закрывается — работа готова
   } catch (err) {
     console.error(err);
-    show('drop');
-    alert('Не получилось обработать картинку: ' + (err?.message || err));
+    stopProcTimer();
+    showError(err, mode);
   }
+}
+
+// Понятная ошибка вместо alert.
+function showError(err, mode) {
+  const msg = String(err?.message || err || '');
+  const isMemory = /bad_alloc|out of memory|OrtRun|allocation/i.test(msg);
+  if (mode === 'pro' && isMemory) {
+    errorText.innerHTML = 'Режим «💎 Качество» не хватило памяти на этой картинке/устройстве. ' +
+      'Попробуй режим «⚡ Быстро» — он лёгкий и почти всегда справляется.';
+    errFast.hidden = false;
+  } else {
+    errorText.textContent = 'Не получилось обработать картинку. ' + (msg ? '(' + msg + ')' : '');
+    errFast.hidden = mode !== 'pro';
+  }
+  show('error');
 }
 
 // Ползунки края
@@ -157,6 +216,15 @@ downloadBtn.addEventListener('click', () => {
 });
 
 againBtn.addEventListener('click', () => show('drop'));
+
+// Кнопки панели ошибки
+errRetry.addEventListener('click', () => { if (currentFile) handleFile(currentFile); });
+errFast.addEventListener('click', () => {
+  const fast = document.querySelector('input[name="mode"][value="fast"]');
+  if (fast) fast.checked = true;
+  if (currentFile) handleFile(currentFile);
+});
+errBack.addEventListener('click', () => show('drop'));
 
 // Честное предупреждение, если у браузера нет WebGPU (про-режим будет медленным).
 if (typeof navigator !== 'undefined' && !navigator.gpu) {

@@ -58,11 +58,27 @@ body {
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 12px;
+  gap: 14px;
   min-height: 300px;
-  color: var(--muted);
+  color: var(--text);
   font-size: 15px;
 }
+.status-body { text-align: left; }
+.status-sub { color: var(--muted); font-size: 13px; margin-top: 4px; }
+
+/* Панель ошибки */
+.error-box {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 14px;
+  min-height: 300px;
+  justify-content: center;
+  text-align: center;
+  padding: 20px;
+}
+.error-icon { font-size: 40px; }
+.error-text { max-width: 480px; color: var(--text); font-size: 15px; line-height: 1.5; }
 .spinner {
   width: 22px; height: 22px;
   border: 3px solid var(--border);
