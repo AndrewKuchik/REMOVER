@@ -93,6 +93,27 @@ body {
 }
 #result-img { display: block; max-width: 100%; max-height: 60vh; }
 
+/* --- Настройки края --- */
+.controls {
+  display: flex;
+  gap: 22px;
+  flex-wrap: wrap;
+  justify-content: center;
+  align-items: center;
+  width: 100%;
+  max-width: 640px;
+  padding: 14px 16px;
+  background: var(--panel-2);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+}
+.control { display: flex; flex-direction: column; gap: 6px; font-size: 13px; color: var(--muted); }
+.control b { color: var(--text); }
+.control input[type="range"] { width: 160px; accent-color: var(--accent); }
+.control-check { flex-direction: row; align-items: center; }
+.control-check label { display: flex; align-items: center; gap: 8px; cursor: pointer; }
+.control-check input { width: 16px; height: 16px; accent-color: var(--accent); }
+
 .actions { display: flex; gap: 12px; flex-wrap: wrap; justify-content: center; }
 .btn {
   appearance: none;

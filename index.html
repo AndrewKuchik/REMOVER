@@ -32,8 +32,24 @@
         <!-- Результат -->
         <div id="result" class="result" hidden>
           <div class="canvas-wrap checker">
-            <img id="result-img" alt="Результат" />
+            <canvas id="result-canvas"></canvas>
           </div>
+
+          <!-- Настройки края -->
+          <div class="controls">
+            <div class="control">
+              <label>Обрезать каёмку: <b id="v-shrink">1</b> px</label>
+              <input id="shrink" type="range" min="0" max="6" step="1" value="1" />
+            </div>
+            <div class="control">
+              <label>Мягкость края: <b id="v-feather">1</b> px</label>
+              <input id="feather" type="range" min="0" max="6" step="1" value="1" />
+            </div>
+            <div class="control control-check">
+              <label><input id="decont" type="checkbox" checked /> Очищать цвет каёмки</label>
+            </div>
+          </div>
+
           <div class="actions">
             <button id="download" class="btn btn-primary">⬇️ Скачать PNG</button>
             <button id="again" class="btn">Другая картинка</button>
